@@ -16,6 +16,10 @@ USER pyth
 WORKDIR /home/pyth
 COPY --chown=pyth:pyth . serum-pyth/
 
+# Download serum market addresses.
+ARG MARKETS_URL="https://raw.githubusercontent.com/project-serum/serum-ts/master/packages/serum/src/markets.json"
+RUN curl "${MARKETS_URL}" > serum-pyth/client/markets.json
+
 # Build serum-pyth.so and serum-pyth-crank.
 RUN ./pyth-client/scripts/build.sh serum-pyth/build
 RUN ./pyth-client/scripts/build-bpf.sh serum-pyth/program

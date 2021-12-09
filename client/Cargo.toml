@@ -1,0 +1,30 @@
+[package]
+name = "pyth-serum-client"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[build-dependencies]
+bindgen = "0.59.2"
+
+[dependencies]
+
+serum_dex = "0.5.0"
+#serum_dex = { path = "../../serum-dex/dex", features = ["no-entrypoint"] }
+
+solana-program = "1.8.8"
+
+solana-sdk = "1.8.8"
+#solana-sdk = { path = "../../solana/sdk" }
+
+solana-client = "1.8.8"
+#solana-client = { path = "../../solana/client" }
+
+bincode = "1.3"
+#bytemuck = "1.7.2"
+serde = { version = "1.0", features = ["derive"] }
+#serde_derive = "1.0"
+serde_json = "1.0"
+#static_assertions = "1.1"
+structopt = "0.3"
+#variant_count = "1.1"
