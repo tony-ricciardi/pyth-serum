@@ -305,13 +305,12 @@ static inline sp_errcode_t sp_get_pyth_instruction(
   return SP_NO_ERROR;
 }
 
-SP_UNUSED
-extern sp_errcode_t entrypoint( const uint8_t* const buf )
-{
-  sp_program_input_t input;
+static inline sp_errcode_t sp_deserialize_input(
+  const uint8_t* const buf,
+  sp_program_input_t* const input
+) {
   SolParameters params;
-  params.ka = input.accounts;
-
+  params.ka = input->accounts;
   const bool valid = sol_deserialize( buf, &params, SP_NUM_ACCOUNTS );
   if ( SP_UNLIKELY( ! valid ) ) {
     return ERROR_INVALID_ARGUMENT;
@@ -319,16 +318,29 @@ extern sp_errcode_t entrypoint( const uint8_t* const buf )
   if ( SP_UNLIKELY( params.ka_num != SP_NUM_ACCOUNTS ) ) {
     return ERROR_NOT_ENOUGH_ACCOUNT_KEYS;
   }
+  return SP_NO_ERROR;
+}
 
-  sp_pyth_instruction_t inst;
-  const sp_errcode_t err = sp_get_pyth_instruction( &input, &inst );
-  if ( SP_UNLIKELY( err != SP_NO_ERROR ) ) {
-    return err;
+static inline sp_errcode_t sp_deserialize_pyth_inst(
+  const uint8_t* const buf,
+  sp_program_input_t* const input,
+  sp_pyth_instruction_t* const inst
+) {
+  sp_errcode_t err = sp_deserialize_input( buf, input );
+  if ( SP_LIKELY( err == SP_NO_ERROR ) ) {
+    err = sp_get_pyth_instruction( input, inst );
   }
+  return err;
+}
 
-  return sol_invoke(
-    &inst.inst,
-    input.accounts,
-    SP_NUM_ACCOUNTS
-  );
+SP_UNUSED
+extern sp_errcode_t entrypoint( const uint8_t* const buf )
+{
+  sp_program_input_t input;
+  sp_pyth_instruction_t inst;
+  sp_errcode_t err = sp_deserialize_pyth_inst( buf, &input, &inst );
+  if ( SP_LIKELY( err == SP_NO_ERROR ) ) {
+    err = sol_invoke( &inst.inst, input.accounts, SP_NUM_ACCOUNTS );
+  }
+  return err;
 }

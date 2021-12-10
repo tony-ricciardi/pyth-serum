@@ -12,7 +12,7 @@ char heap_start[ 8192 ];
 #include <serum-pyth/tests/serum_to_pyth.h>
 
 // Assert pyth-client allocations use test heap.
-Test( serum_pyth, heap_start )
+Test( serum_pyth, heap )
 {
   sp_assert_eq( PC_HEAP_START, heap_start );
   sp_assert_ne( PC_HEAP_START, NULL );

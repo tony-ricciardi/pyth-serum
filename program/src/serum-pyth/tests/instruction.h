@@ -2,42 +2,7 @@
 
 #include <serum-pyth/serum-pyth.h>
 #include <serum-pyth/tests/assert.h>
-
-// Aligned with errors in solana_sdk.h
-static const char* SP_SOL_ERR_MSGS[] = {
-  "SUCCESS",
-  "CUSTOM_ZERO",
-  "INVALID_ARGUMENT",
-  "INVALID_INSTRUCTION_DATA",
-  "INVALID_ACCOUNT_DATA",
-  "ACCOUNT_DATA_TOO_SMALL",
-  "INSUFFICIENT_FUNDS",
-  "INCORRECT_PROGRAM_ID",
-  "MISSING_REQUIRED_SIGNATURES",
-  "ACCOUNT_ALREADY_INITIALIZED",
-  "UNINITIALIZED_ACCOUNT",
-  "NOT_ENOUGH_ACCOUNT_KEYS",
-  "ACCOUNT_BORROW_FAILED",
-  "MAX_SEED_LENGTH_EXCEEDED",
-  "INVALID_SEEDS",
-};
-
-// Inverse of TO_BUILTIN(), for reading error codes in assertions.
-// sp_error_idx( ERROR_INVALID_ARGUMENT ) == 2 -> "INVALID_ARGUMENT"
-static inline uint64_t sp_error_idx( const sp_errcode_t err )
-{
-  return ( err >> 32 ) & ( ( 1ul << 32 ) - 1 );
-}
-
-static inline const char* sp_error_msg( const sp_errcode_t err )
-{
-  const uint64_t idx = sp_error_idx( err );
-  return (
-    idx < SOL_ARRAY_SIZE( SP_SOL_ERR_MSGS )
-    ? SP_SOL_ERR_MSGS[ idx ]
-    : "UNKNOWN_ERROR"
-  );
-}
+#include <serum-pyth/tests/sdk.h>
 
 typedef uint8_t sp_market_buf_t[
   SERUM_HEADER_LEN
@@ -58,6 +23,10 @@ typedef struct
 {
   sp_program_input_t prog_input;
   SolPubkey keys[ SP_NUM_ACCOUNTS ];
+
+  SolParameters params;
+  uint8_t* serialization_buf;
+  uint64_t serialization_buf_len;
 
   SolPubkey token_prog;
   sysvar_clock_t sys_clock;
@@ -152,6 +121,14 @@ static void sp_init_test_input( sp_test_input_t* const input )
 
   SolAccountInfo* const accounts = input->prog_input.accounts;
   SolPubkey* const keys = input->keys;
+
+  input->params.ka = accounts;
+  input->params.ka_num = SP_NUM_ACCOUNTS;
+  input->params.data_len = 0;
+  input->params.data = NULL;
+
+  input->serialization_buf_len = sp_input_len( &input->params );
+  input->serialization_buf = cr_malloc( input->serialization_buf_len );
 
   for ( int i = 0; i < SP_NUM_ACCOUNTS; ++i ) {
     SP_MEMSET_SIZEOF( &keys[ i ], i );
@@ -264,13 +241,21 @@ static void sp_init_test_input( sp_test_input_t* const input )
 }
 
 static sp_errcode_t sp_get_test_instruction(
-  const sp_test_input_t* const input,
+  sp_test_input_t* const input,
   sp_pyth_instruction_t* const inst
 ) {
   SP_MEMSET_SIZEOF( inst, 3456 );
   inst->cmd.price_ = 3456;
   inst->cmd.conf_ = 3456;
-  return sp_get_pyth_instruction( &( input )->prog_input, inst );
+  uint8_t* const buf = input->serialization_buf;
+  if ( buf ) {
+    const uint8_t* const buf_end = sp_serialize( &input->params, buf );
+    sp_assert_le( buf_end, buf + input->serialization_buf_len );
+    return sp_deserialize_pyth_inst( buf, &input->prog_input, inst );
+  }
+  else {
+    return sp_get_pyth_instruction( &input->prog_input, inst );
+  }
 }
 
 #define sp_assert_err( input, inst, err ) sp_assert_eq( \

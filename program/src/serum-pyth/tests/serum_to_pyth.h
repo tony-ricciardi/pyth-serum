@@ -72,8 +72,8 @@ static uint64_t sp_old_s2p(
   const uint8_t quote_exp,
   const uint8_t base_exp,
   const uint64_t quote_lotsize,
-  const uint64_t base_lotsize )
-{
+  const uint64_t base_lotsize
+) {
   // Old impl required pyth_exp >= max( quote_exp, base_exp ).
   if ( pyth_exp < quote_exp ) {
     return 0;
